@@ -1,0 +1,126 @@
+version: "3.9"
+
+services:
+  # =============================
+  # 🧠 Backend API (Golang)
+  # =============================
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: crypto-api
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - crypto_net
+
+  # =============================
+  # 💻 Frontend (Next.js)
+  # =============================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: crypto-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://api:8080/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - crypto_net
+
+  # =============================
+  # 🗄 PostgreSQL (4 Databases)
+  # =============================
+  postgres:
+    image: postgres:16-alpine
+    container_name: crypto-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crypto_user
+      POSTGRES_PASSWORD: crypto_pass
+      POSTGRES_MULTIPLE_DATABASES: core_db,kyc_db,rates_db,audit_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/db-init:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - crypto_net
+
+  # =============================
+  # 🔥 Redis (Cache + Queue)
+  # =============================
+  redis:
+    image: redis:7-alpine
+    container_name: crypto-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - crypto_net
+
+  # =============================
+  # 🧰 Redis Commander (GUI)
+  # =============================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: crypto-redis-commander
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - crypto_net
+
+  # =============================
+  # 📊 Monitoring - Prometheus
+  # =============================
+  prometheus:
+    image: prom/prometheus
+    container_name: crypto-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - crypto_net
+
+  # =============================
+  # 📈 Monitoring - Grafana
+  # =============================
+  grafana:
+    image: grafana/grafana
+    container_name: crypto-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    depends_on:
+      - prometheus
+    networks:
+      - crypto_net
+
+networks:
+  crypto_net:
+    driver: bridge
+
+volumes:
+  postgres_data:

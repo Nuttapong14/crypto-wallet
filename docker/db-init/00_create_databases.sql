@@ -1,0 +1,4 @@
+CREATE DATABASE core_db;
+CREATE DATABASE kyc_db;
+CREATE DATABASE rates_db;
+CREATE DATABASE audit_db;
