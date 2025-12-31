@@ -1,0 +1,5 @@
+model = "gpt-5-codex"
+model_reasoning_effort = "medium"
+
+[projects."/media/nuttapong/work/own/crypto-wallet"]
+trust_level = "trusted"

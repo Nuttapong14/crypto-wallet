@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+coverage/
+.next/
+out/
+*.log
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+crypto-wallet-backend/
+database/
+monitoring/

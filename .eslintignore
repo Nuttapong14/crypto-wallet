@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+coverage/
+.next/
+out/
+*.log
+.env
+.env.*
+public/
+crypto-wallet-backend/
+database/
+monitoring/

@@ -1,0 +1,46 @@
+# General OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Logs
+*.log
+*.log.*
+
+# Dependency directories
+node_modules/
+vendor/
+
+# Build artifacts
+dist/
+build/
+coverage/
+coverage.out
+bin/
+*.exe
+*.test
+*.out
+
+# Next.js / React
+.next/
+out/
+
+# Docker and Compose
+docker/*.env
+.docker/
+
+# Database backups
+backups/
+

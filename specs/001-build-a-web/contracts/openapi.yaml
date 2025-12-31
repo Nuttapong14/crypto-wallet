@@ -1,0 +1,1268 @@
+openapi: 3.0.3
+info:
+  title: Multi-Chain Crypto Wallet and Exchange Platform API
+  description: |
+    RESTful API for cryptocurrency wallet management, transactions, and exchange operations.
+    Supports Bitcoin (BTC), Ethereum (ETH), Solana (SOL), and Stellar (XLM) blockchains.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api@cryptowallet.example.com
+  license:
+    name: Proprietary
+    url: https://cryptowallet.example.com/license
+
+servers:
+  - url: https://api.cryptowallet.example.com/v1
+    description: Production server
+  - url: https://staging-api.cryptowallet.example.com/v1
+    description: Staging server
+  - url: http://localhost:8080/v1
+    description: Local development server
+
+security:
+  - cookieAuth: []
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Wallets
+    description: Wallet creation and management
+  - name: Transactions
+    description: Cryptocurrency transactions
+  - name: Exchange
+    description: Token swapping and exchange
+  - name: KYC
+    description: KYC verification and compliance
+  - name: Rates
+    description: Cryptocurrency prices and rates
+  - name: Analytics
+    description: Portfolio analytics and statistics
+  - name: Notifications
+    description: User notifications
+  - name: Users
+    description: User profile and settings
+  - name: Health
+    description: System health and monitoring
+
+paths:
+  # ==================== Authentication ====================
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register new user
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Strict; Max-Age=1800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: User logout
+      operationId: logout
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== Wallets ====================
+  /wallets:
+    get:
+      tags: [Wallets]
+      summary: List user wallets
+      operationId: listWallets
+      parameters:
+        - name: chain
+          in: query
+          schema:
+            $ref: '#/components/schemas/BlockchainChain'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived]
+      responses:
+        '200':
+          description: Wallets retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  wallets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Wallet'
+                  total:
+                    type: integer
+
+    post:
+      tags: [Wallets]
+      summary: Create new wallet
+      operationId: createWallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWalletRequest'
+      responses:
+        '201':
+          description: Wallet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /wallets/{id}:
+    get:
+      tags: [Wallets]
+      summary: Get wallet details
+      operationId: getWallet
+      parameters:
+        - $ref: '#/components/parameters/WalletId'
+      responses:
+        '200':
+          description: Wallet retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /wallets/{id}/balance:
+    get:
+      tags: [Wallets]
+      summary: Get wallet balance
+      operationId: getWalletBalance
+      parameters:
+        - $ref: '#/components/parameters/WalletId'
+      responses:
+        '200':
+          description: Balance retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletBalance'
+
+  /wallets/{id}/transactions:
+    get:
+      tags: [Wallets]
+      summary: Get wallet transactions
+      operationId: getWalletTransactions
+      parameters:
+        - $ref: '#/components/parameters/WalletId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TransactionStatus'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/TransactionType'
+      responses:
+        '200':
+          description: Transactions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  total:
+                    type: integer
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  # ==================== Transactions ====================
+  /transactions:
+    get:
+      tags: [Transactions]
+      summary: List user transactions
+      operationId: listTransactions
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: chain
+          in: query
+          schema:
+            $ref: '#/components/schemas/BlockchainChain'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TransactionStatus'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/TransactionType'
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Transactions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  total:
+                    type: integer
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Transactions]
+      summary: Create and broadcast transaction
+      operationId: createTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+      responses:
+        '201':
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /transactions/{id}:
+    get:
+      tags: [Transactions]
+      summary: Get transaction details
+      operationId: getTransaction
+      parameters:
+        - $ref: '#/components/parameters/TransactionId'
+      responses:
+        '200':
+          description: Transaction retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /transactions/estimate-fee:
+    post:
+      tags: [Transactions]
+      summary: Estimate transaction fee
+      operationId: estimateFee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstimateFeeRequest'
+      responses:
+        '200':
+          description: Fee estimated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeeEstimate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ==================== Exchange ====================
+  /exchange/rates:
+    get:
+      tags: [Exchange]
+      summary: Get current exchange rates
+      operationId: getExchangeRates
+      parameters:
+        - name: base
+          in: query
+          schema:
+            type: string
+        - name: quote
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Rates retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TradingPair'
+
+  /exchange/quote:
+    post:
+      tags: [Exchange]
+      summary: Get exchange quote
+      operationId: getQuote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequest'
+      responses:
+        '200':
+          description: Quote generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /exchange/swap:
+    post:
+      tags: [Exchange]
+      summary: Execute token swap
+      operationId: executeSwap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SwapRequest'
+      responses:
+        '201':
+          description: Swap executed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeOperation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /exchange/history:
+    get:
+      tags: [Exchange]
+      summary: Get swap history
+      operationId: getSwapHistory
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: History retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  operations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExchangeOperation'
+                  total:
+                    type: integer
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  # ==================== KYC ====================
+  /kyc/submit:
+    post:
+      tags: [KYC]
+      summary: Submit KYC profile
+      operationId: submitKYC
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KYCSubmitRequest'
+      responses:
+        '201':
+          description: KYC submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /kyc/documents:
+    post:
+      tags: [KYC]
+      summary: Upload verification document
+      operationId: uploadDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [document_type, file]
+              properties:
+                document_type:
+                  type: string
+                  enum: [passport, national_id, drivers_license, proof_of_address, selfie]
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Document uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCDocument'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /kyc/status:
+    get:
+      tags: [KYC]
+      summary: Get KYC verification status
+      operationId: getKYCStatus
+      responses:
+        '200':
+          description: Status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCProfile'
+
+  # ==================== Rates ====================
+  /rates:
+    get:
+      tags: [Rates]
+      summary: Get current cryptocurrency prices
+      operationId: getRates
+      parameters:
+        - name: symbols
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Rates retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExchangeRate'
+                  last_updated:
+                    type: string
+                    format: date-time
+
+  /rates/history:
+    get:
+      tags: [Rates]
+      summary: Get historical price data
+      operationId: getHistoricalRates
+      parameters:
+        - name: symbol
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: interval
+          in: query
+          schema:
+            type: string
+            enum: ['1m', '5m', '15m', '1h', '4h', '1d', '1w']
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: History retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbol:
+                    type: string
+                  interval:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PriceHistory'
+
+  # ==================== Analytics ====================
+  /analytics/portfolio:
+    get:
+      tags: [Analytics]
+      summary: Get portfolio summary
+      operationId: getPortfolio
+      responses:
+        '200':
+          description: Portfolio retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioSummary'
+
+  /analytics/performance:
+    get:
+      tags: [Analytics]
+      summary: Get portfolio performance
+      operationId: getPerformance
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: ['24h', '7d', '30d', '90d', '1y', 'all']
+      responses:
+        '200':
+          description: Performance retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioPerformance'
+
+  # ==================== Health ====================
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: System healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                      redis:
+                        type: string
+                      blockchain_btc:
+                        type: string
+                      blockchain_eth:
+                        type: string
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: jwt
+
+  parameters:
+    WalletId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TransactionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  schemas:
+    # ========== Enums ==========
+    BlockchainChain:
+      type: string
+      enum: [BTC, ETH, SOL, XLM]
+    TransactionStatus:
+      type: string
+      enum: [pending, confirming, confirmed, failed, cancelled]
+    TransactionType:
+      type: string
+      enum: [send, receive, swap_in, swap_out]
+    VerificationLevel:
+      type: string
+      enum: [unverified, basic, full]
+    KYCStatus:
+      type: string
+      enum: [not_started, pending, under_review, approved, rejected, expired]
+
+    # ========== Authentication ==========
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 12
+          example: SecurePassword123!
+        first_name:
+          type: string
+          example: John
+        last_name:
+          type: string
+          example: Doe
+        preferred_currency:
+          type: string
+          enum: [USD, EUR, THB, GBP, JPY]
+          default: USD
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        two_factor_code:
+          type: string
+          pattern: '^[0-9]{6}$'
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token_expires_at:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        status:
+          type: string
+          enum: [active, suspended, deleted]
+        preferred_currency:
+          type: string
+        two_factor_enabled:
+          type: boolean
+        email_verified:
+          type: boolean
+        kyc_level:
+          $ref: '#/components/schemas/VerificationLevel'
+        created_at:
+          type: string
+          format: date-time
+
+    # ========== Wallets ==========
+    CreateWalletRequest:
+      type: object
+      required: [chain]
+      properties:
+        chain:
+          $ref: '#/components/schemas/BlockchainChain'
+        label:
+          type: string
+          maxLength: 100
+
+    Wallet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        chain:
+          $ref: '#/components/schemas/BlockchainChain'
+        address:
+          type: string
+        label:
+          type: string
+        balance:
+          type: string
+          example: "1.5"
+        balance_usd:
+          type: string
+          example: "50000.00"
+        status:
+          type: string
+          enum: [active, archived]
+        created_at:
+          type: string
+          format: date-time
+
+    WalletDetail:
+      allOf:
+        - $ref: '#/components/schemas/Wallet'
+        - type: object
+          properties:
+            derivation_path:
+              type: string
+            balance_updated_at:
+              type: string
+              format: date-time
+            transaction_count:
+              type: integer
+
+    WalletBalance:
+      type: object
+      properties:
+        wallet_id:
+          type: string
+          format: uuid
+        balance:
+          type: string
+        balance_usd:
+          type: string
+        price_usd:
+          type: string
+        last_updated:
+          type: string
+          format: date-time
+
+    # ========== Transactions ==========
+    CreateTransactionRequest:
+      type: object
+      required: [wallet_id, to_address, amount]
+      properties:
+        wallet_id:
+          type: string
+          format: uuid
+        to_address:
+          type: string
+        amount:
+          type: string
+        fee_level:
+          type: string
+          enum: [slow, standard, fast]
+          default: standard
+        memo:
+          type: string
+          maxLength: 500
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        wallet_id:
+          type: string
+          format: uuid
+        chain:
+          $ref: '#/components/schemas/BlockchainChain'
+        tx_hash:
+          type: string
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        amount:
+          type: string
+        fee:
+          type: string
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        from_address:
+          type: string
+        to_address:
+          type: string
+        confirmations:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        confirmed_at:
+          type: string
+          format: date-time
+
+    TransactionDetail:
+      allOf:
+        - $ref: '#/components/schemas/Transaction'
+        - type: object
+          properties:
+            block_number:
+              type: integer
+              format: int64
+            explorer_url:
+              type: string
+              format: uri
+            metadata:
+              type: object
+
+    EstimateFeeRequest:
+      type: object
+      required: [chain, to_address, amount]
+      properties:
+        chain:
+          $ref: '#/components/schemas/BlockchainChain'
+        to_address:
+          type: string
+        amount:
+          type: string
+
+    FeeEstimate:
+      type: object
+      properties:
+        chain:
+          $ref: '#/components/schemas/BlockchainChain'
+        slow:
+          type: object
+          properties:
+            fee:
+              type: string
+            estimated_time:
+              type: string
+        standard:
+          type: object
+          properties:
+            fee:
+              type: string
+            estimated_time:
+              type: string
+        fast:
+          type: object
+          properties:
+            fee:
+              type: string
+            estimated_time:
+              type: string
+
+    # ========== Exchange ==========
+    TradingPair:
+      type: object
+      properties:
+        base_symbol:
+          type: string
+        quote_symbol:
+          type: string
+        exchange_rate:
+          type: string
+        fee_percentage:
+          type: string
+        is_active:
+          type: boolean
+
+    QuoteRequest:
+      type: object
+      required: [from_wallet_id, to_chain, amount]
+      properties:
+        from_wallet_id:
+          type: string
+          format: uuid
+        to_chain:
+          $ref: '#/components/schemas/BlockchainChain'
+        amount:
+          type: string
+
+    Quote:
+      type: object
+      properties:
+        quote_id:
+          type: string
+          format: uuid
+        from_symbol:
+          type: string
+        to_symbol:
+          type: string
+        from_amount:
+          type: string
+        to_amount:
+          type: string
+        exchange_rate:
+          type: string
+        fee_percentage:
+          type: string
+        fee_amount:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+
+    SwapRequest:
+      type: object
+      required: [quote_id, from_wallet_id, to_wallet_id]
+      properties:
+        quote_id:
+          type: string
+          format: uuid
+        from_wallet_id:
+          type: string
+          format: uuid
+        to_wallet_id:
+          type: string
+          format: uuid
+
+    ExchangeOperation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        from_symbol:
+          type: string
+        to_symbol:
+          type: string
+        from_amount:
+          type: string
+        to_amount:
+          type: string
+        exchange_rate:
+          type: string
+        fee_amount:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, failed, cancelled]
+        created_at:
+          type: string
+          format: date-time
+        executed_at:
+          type: string
+          format: date-time
+
+    # ========== KYC ==========
+    KYCSubmitRequest:
+      type: object
+      required: [first_name, last_name, date_of_birth, nationality]
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        nationality:
+          type: string
+          minLength: 2
+          maxLength: 2
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            postal_code:
+              type: string
+            country:
+              type: string
+
+    KYCProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        verification_level:
+          $ref: '#/components/schemas/VerificationLevel'
+        status:
+          $ref: '#/components/schemas/KYCStatus'
+        submitted_at:
+          type: string
+          format: date-time
+        approved_at:
+          type: string
+          format: date-time
+        daily_limit_usd:
+          type: string
+        monthly_limit_usd:
+          type: string
+
+    KYCDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        document_type:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        uploaded_at:
+          type: string
+          format: date-time
+
+    # ========== Rates ==========
+    ExchangeRate:
+      type: object
+      properties:
+        symbol:
+          type: string
+        price_usd:
+          type: string
+        price_change_24h:
+          type: string
+        volume_24h:
+          type: string
+        market_cap:
+          type: string
+        last_updated:
+          type: string
+          format: date-time
+
+    PriceHistory:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        open:
+          type: string
+        high:
+          type: string
+        low:
+          type: string
+        close:
+          type: string
+        volume:
+          type: string
+
+    # ========== Analytics ==========
+    PortfolioSummary:
+      type: object
+      properties:
+        total_balance_usd:
+          type: string
+        total_change_24h:
+          type: string
+        total_change_percentage_24h:
+          type: string
+        assets:
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+              balance:
+                type: string
+              balance_usd:
+                type: string
+              percentage:
+                type: string
+
+    PortfolioPerformance:
+      type: object
+      properties:
+        period:
+          type: string
+        initial_value_usd:
+          type: string
+        final_value_usd:
+          type: string
+        gain_loss_usd:
+          type: string
+        gain_loss_percentage:
+          type: string
+        data_points:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              value_usd:
+                type: string
+
+    # ========== Common ==========
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

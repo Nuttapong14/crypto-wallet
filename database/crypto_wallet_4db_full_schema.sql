@@ -182,6 +182,59 @@ CREATE TABLE IF NOT EXISTS sync_jobs (
     details    JSONB DEFAULT '{}'::jsonb
 );
 
+-- Exchange Operations
+CREATE TABLE IF NOT EXISTS exchange_operations (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    from_wallet_id    UUID NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+    to_wallet_id      UUID NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+    from_amount       NUMERIC(36,18) NOT NULL CHECK (from_amount > 0),
+    to_amount         NUMERIC(36,18) NOT NULL CHECK (to_amount >= 0),
+    exchange_rate     NUMERIC(36,18) NOT NULL CHECK (exchange_rate > 0),
+    fee_percentage    NUMERIC(5,4) NOT NULL DEFAULT 0.0050 CHECK (fee_percentage >= 0),
+    fee_amount        NUMERIC(36,18) NOT NULL CHECK (fee_amount >= 0),
+    status            VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
+    quote_expires_at  TIMESTAMPTZ NOT NULL,
+    executed_at       TIMESTAMPTZ,
+    from_transaction_id UUID REFERENCES transactions(id),
+    to_transaction_id   UUID REFERENCES transactions(id),
+    error_message     TEXT,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS exchange_ops_user_idx ON exchange_operations (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS exchange_ops_wallet_idx ON exchange_operations (from_wallet_id, to_wallet_id);
+CREATE INDEX IF NOT EXISTS exchange_ops_status_idx ON exchange_operations (status, quote_expires_at);
+
+CREATE TRIGGER trg_exchange_operations_updated
+BEFORE UPDATE ON exchange_operations
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Trading Pairs
+CREATE TABLE IF NOT EXISTS trading_pairs (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    base_symbol      VARCHAR(10) NOT NULL,
+    quote_symbol     VARCHAR(10) NOT NULL,
+    exchange_rate    NUMERIC(36,18) NOT NULL CHECK (exchange_rate > 0),
+    inverse_rate     NUMERIC(36,18) NOT NULL CHECK (inverse_rate > 0),
+    fee_percentage   NUMERIC(5,4) NOT NULL DEFAULT 0.0050 CHECK (fee_percentage >= 0),
+    min_swap_amount  NUMERIC(36,18) NOT NULL DEFAULT 0 CHECK (min_swap_amount >= 0),
+    max_swap_amount  NUMERIC(36,18),
+    daily_volume     NUMERIC(36,18) NOT NULL DEFAULT 0 CHECK (daily_volume >= 0),
+    is_active        BOOLEAN NOT NULL DEFAULT true,
+    has_liquidity    BOOLEAN NOT NULL DEFAULT true,
+    last_updated     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT trading_pairs_unique UNIQUE (base_symbol, quote_symbol)
+);
+CREATE INDEX IF NOT EXISTS trading_pairs_active_idx ON trading_pairs (is_active, has_liquidity);
+CREATE INDEX IF NOT EXISTS trading_pairs_symbol_idx ON trading_pairs (base_symbol, quote_symbol);
+
+CREATE TRIGGER trg_trading_pairs_updated
+BEFORE UPDATE ON trading_pairs
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 -- =====================================================================
 -- ============================== 2) kyc_db =============================
 -- =====================================================================

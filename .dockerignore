@@ -1,0 +1,33 @@
+# Version control
+.git
+.gitignore
+
+# Node dependencies and caches
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+pnpm-lock.yaml
+
+# Build artifacts
+dist
+build
+coverage
+.next
+out
+bin
+
+# Environment and configuration
+.env
+.env.*
+*.pem
+
+# Docker files
+Dockerfile*
+.dockerignore
+
+# Temporary files
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
